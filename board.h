@@ -32,6 +32,7 @@ private:
     Player state = First;
     std::map<Player, std::set<size_t>> players;
     std::map<size_t, size_t> selectedCells;
+    std::set<size_t> deletedCells;
     bool isFight = false;
 
     std::vector<std::set<size_t>> ways = {
@@ -61,6 +62,8 @@ private:
     bool checkWayPr(size_t way, size_t cell);
     bool checkWayNx(size_t way, size_t cell);
     bool checkWay(size_t way, size_t cell);
+    void lightFigtingCells(size_t cell);
+    void identifyQween(size_t cell);
 
     Player nextState();
 

@@ -24,10 +24,10 @@ Board::Board(QWidget *parent) : QWidget(parent)
     size_t col = 1;
     for (auto& cell : cells) {
         if (r < 4) {
-            firstPlayer.insert(number);
+            players[First].insert(number);
             cell = std::unique_ptr<Cell>(new Cell(number, Way(number), FirstPlayerSimple));
         } else if (r > 5) {
-            secondPlayer.insert(number);
+            players[Second].insert(number);
             cell = std::unique_ptr<Cell>(new Cell(number, Way(number), SecondPlayerSimple));
         } else {
             cell = std::unique_ptr<Cell>(new Cell(number, Way(number), Empty));
@@ -36,32 +36,21 @@ Board::Board(QWidget *parent) : QWidget(parent)
         connect(cell.get(), &Cell::highlighted, [&](size_t num) {
             cells[lightNumber].get()->offLighting();
             if (selectedCells.count(num) > 0) {
-                qDebug() << cells[lightNumber].get()->getType();
                 cells[num].get()->setType(cells[lightNumber].get()->getType());
                 cells[lightNumber].get()->setType(Empty);
-                if (state == First) {
-                    firstPlayer.erase(lightNumber);
-                    firstPlayer.insert(num);
-                } else {
-                    secondPlayer.erase(lightNumber);
-                    secondPlayer.insert(num);
-                }
+                players[state].erase(lightNumber);
+                players[state].insert(num);
                 size_t del_cell = selectedCells[num];
                 if (del_cell != NO_CUT) {
                     cells[del_cell].get()->setType(Empty);
-                    if (state == First) {
-                        firstPlayer.erase(del_cell);
-                    } else {
-                        secondPlayer.erase(del_cell);
-                    }
+                    players[state].erase(del_cell);
                 }
 
                 state = (state == First) ? Second : First;
             }
             clearSelectedCells();
             lightNumber = num;
-            if ((state == First && firstPlayer.count(lightNumber) > 0)
-                    || (state == Second && secondPlayer.count(lightNumber) > 0)) {
+            if (players[state].count(lightNumber) > 0) {
                 calckSteps();
             }
         });
@@ -81,7 +70,7 @@ Board::Board(QWidget *parent) : QWidget(parent)
 std::pair<size_t, size_t> Board::Way(size_t cell_number)
 {
     if (cell_number == 4 || cell_number == 45) {
-        return {8, 20};
+        return {8, NO_WAY};
     }
     size_t f = 20;
     size_t counter = 0;
@@ -99,90 +88,72 @@ std::pair<size_t, size_t> Board::Way(size_t cell_number)
 
 void Board::calckSteps()
 {
-    clearSelectedCells();
+    calckFight();
 
     cells[lightNumber].get()->onLighting();
     Type t = cells[lightNumber].get()->getType();
-    auto p = cells[lightNumber].get()->getWay();
-    if (state == First) {
-        if (t == FirstPlayerSimple) {
-            auto it = next(ways[p.first].find(lightNumber));
-            if (it != end(ways[p.first])
-                    && cells[*it].get()->getType() != FirstPlayerSimple
-                    && cells[*it].get()->getType() != FirstPlayerQween) {
-                if (cells[*it].get()->getType() == Empty) {
-                    selectedCells.insert({*it, NO_CUT});
-                    cells[*it].get()->setSelected();
-                } else {
-                    auto d_it = it;
-                    it = next(it);
-                    if (it != end(ways[p.first]) && cells[*it].get()->getType() == Empty) {
-                        selectedCells.insert({*it, *d_it});
-                        cells[*it].get()->setSelected();
-                    }
-                }
-            }
-            if (p.second < 17) {
-                it = next(ways[p.second].find(lightNumber));
-                if (it != end(ways[p.second])
+    auto [w1, w2] = cells[lightNumber].get()->getWay();
+
+    if ((isFight && (checkWay(w1, lightNumber) || checkWay(w2, lightNumber))) || !isFight) {
+        if (state == First) {
+            if (t == FirstPlayerSimple) {
+                auto it = next(ways[w1].find(lightNumber));
+                if (it != end(ways[w1])
                         && cells[*it].get()->getType() != FirstPlayerSimple
                         && cells[*it].get()->getType() != FirstPlayerQween) {
                     if (cells[*it].get()->getType() == Empty) {
-                        selectedCells.insert({*it, NO_CUT});
-                        cells[*it].get()->setSelected();
+                        if (!(checkWay(w1, lightNumber) || checkWay(w2, lightNumber))) {
+                            selectedCells.insert({*it, NO_CUT});
+                            cells[*it].get()->setSelected();
+                        }
                     } else {
                         auto d_it = it;
                         it = next(it);
-                        if (it != end(ways[p.second]) && cells[*it].get()->getType() == Empty) {
+                        if (it != end(ways[w1]) && cells[*it].get()->getType() == Empty) {
                             selectedCells.insert({*it, *d_it});
                             cells[*it].get()->setSelected();
                         }
                     }
                 }
-            }
-
-        } else {
-//            todo: дамка
-        }
-
-    } else {
-        qDebug() << p;
-        if (t == SecondPlayerSimple) {
-            qDebug() << "pp";
-            auto it = ways[p.first].find(lightNumber);
-            if (it != begin(ways[p.first])) {
-                it = prev(it);
-                if (cells[*it].get()->getType() != SecondPlayerSimple
-                        && cells[*it].get()->getType() != SecondPlayerQween) {
-
-                    if (cells[*it].get()->getType() == Empty) {
-                        selectedCells.insert({*it, NO_CUT});
-                        cells[*it].get()->setSelected();
-                    } else {
-                        if (it != begin(ways[p.first])) {
+                if (w2 != NO_WAY) {
+                    it = next(ways[w2].find(lightNumber));
+                    if (it != end(ways[w2])
+                            && cells[*it].get()->getType() != FirstPlayerSimple
+                            && cells[*it].get()->getType() != FirstPlayerQween) {
+                        if (cells[*it].get()->getType() == Empty) {
+                            if (!(checkWay(w1, lightNumber) || checkWay(w2, lightNumber))) {
+                                selectedCells.insert({*it, NO_CUT});
+                                cells[*it].get()->setSelected();
+                            }
+                        } else {
                             auto d_it = it;
-                            it = prev(it);
-                            if (cells[*it].get()->getType() == Empty) {
+                            it = next(it);
+                            if (it != end(ways[w2]) && cells[*it].get()->getType() == Empty) {
                                 selectedCells.insert({*it, *d_it});
                                 cells[*it].get()->setSelected();
                             }
                         }
                     }
                 }
+
+            } else {
+    //            todo: дамка
             }
 
-            if (p.second < 17) {
-                it = ways[p.second].find(lightNumber);
-                if (it != begin(ways[p.second])) {
+        } else {
+            if (t == SecondPlayerSimple) {
+                auto it = ways[w1].find(lightNumber);
+                if (it != begin(ways[w1])) {
                     it = prev(it);
                     if (cells[*it].get()->getType() != SecondPlayerSimple
                             && cells[*it].get()->getType() != SecondPlayerQween) {
-
                         if (cells[*it].get()->getType() == Empty) {
-                            selectedCells.insert({*it, NO_CUT});
-                            cells[*it].get()->setSelected();
+                            if (!(checkWay(w1, lightNumber) || checkWay(w2, lightNumber))) {
+                                selectedCells.insert({*it, NO_CUT});
+                                cells[*it].get()->setSelected();
+                            }
                         } else {
-                            if (it != begin(ways[p.second])) {
+                            if (it != begin(ways[w1])) {
                                 auto d_it = it;
                                 it = prev(it);
                                 if (cells[*it].get()->getType() == Empty) {
@@ -193,10 +164,36 @@ void Board::calckSteps()
                         }
                     }
                 }
-            }
 
-        } else {
-//            todo: дамка
+                if (w2 != NO_WAY) {
+                    it = ways[w2].find(lightNumber);
+                    if (it != begin(ways[w2])) {
+                        it = prev(it);
+                        if (cells[*it].get()->getType() != SecondPlayerSimple
+                                && cells[*it].get()->getType() != SecondPlayerQween) {
+
+                            if (cells[*it].get()->getType() == Empty) {
+                                if (!(checkWay(w1, lightNumber) || checkWay(w2, lightNumber))) {
+                                    selectedCells.insert({*it, NO_CUT});
+                                    cells[*it].get()->setSelected();
+                                }
+                            } else {
+                                if (it != begin(ways[w2])) {
+                                    auto d_it = it;
+                                    it = prev(it);
+                                    if (cells[*it].get()->getType() == Empty) {
+                                        selectedCells.insert({*it, *d_it});
+                                        cells[*it].get()->setSelected();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } else {
+    //            todo: дамка
+            }
         }
     }
 }
@@ -208,3 +205,62 @@ void Board::clearSelectedCells()
     }
     selectedCells.clear();
 }
+
+void Board::calckFight()
+{
+    for (const auto& i : players[state]) {
+        if (cells[i].get()->getType() == FirstPlayerSimple ||
+            cells[i].get()->getType() == SecondPlayerSimple) {
+            auto [way1, way2] = cells[i].get()->getWay();
+            if (checkWay(way1, i) || checkWay(way2, i)) {
+                isFight = true;
+                break;
+            }
+        } else {
+            // дамка
+        }
+    }
+}
+
+bool Board::checkWayPr(size_t way, size_t cell)
+{
+    auto it = ways[way].find(cell);
+    if (it != begin(ways[way])) {
+        it = prev(it);
+        if (players[nextState()].count(*it) > 0) {
+            if (it != begin(ways[way]) && cells[*prev(it)].get()->getType() == Empty) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Board::checkWayNx(size_t way, size_t cell)
+{
+    auto it = next(ways[way].find(cell));
+    if (it != end(ways[way])) {
+        if (players[nextState()].count(*it) > 0) {
+            it = next(it);
+            if (it != end(ways[way]) && cells[*it].get()->getType() == Empty) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Board::checkWay(size_t way, size_t cell)
+{
+    return checkWayPr(way, cell) || checkWayNx(way, cell);
+}
+
+Player Board::nextState()
+{
+    if (state == First) {
+        return Second;
+    } else {
+        return First;
+    }
+}
+

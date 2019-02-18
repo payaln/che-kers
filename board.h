@@ -13,9 +13,11 @@
 
 #define NO_CUT 100
 
+#define NO_WAY 20
+
 enum Player {
-    First,
-    Second
+    First, // 0
+    Second // 1
 };
 
 class Board : public QWidget
@@ -28,9 +30,9 @@ private:
     std::array<std::unique_ptr<Cell>, 50> cells;
     size_t lightNumber = 0;
     Player state = First;
-    std::set<size_t> firstPlayer;
-    std::set<size_t> secondPlayer;
+    std::map<Player, std::set<size_t>> players;
     std::map<size_t, size_t> selectedCells;
+    bool isFight = false;
 
     std::vector<std::set<size_t>> ways = {
         {0, 5},
@@ -55,6 +57,12 @@ private:
     std::pair<size_t, size_t> Way(size_t cell_number);
     void calckSteps();
     void clearSelectedCells();
+    void calckFight();
+    bool checkWayPr(size_t way, size_t cell);
+    bool checkWayNx(size_t way, size_t cell);
+    bool checkWay(size_t way, size_t cell);
+
+    Player nextState();
 
 signals:
 

@@ -1,6 +1,8 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <QGridLayout>
+#include <QMessageBox>
 #include <QWidget>
 #include <array>
 #include <memory>
@@ -62,14 +64,15 @@ private:
     bool checkWayPr(size_t way, size_t cell);
     bool checkWayNx(size_t way, size_t cell);
     bool checkWay(size_t way, size_t cell);
-    void lightFigtingCells(size_t cell);
-    void identifyQween(size_t cell);
-
+    void lightFigtingCells(Type t);
+    void lightFigtingCellsQueen();
+    void lightFigtingCellsSimple();
+    void identifyQueen(size_t cell);
+    void calckStepsQueen(size_t w1, size_t w2);
     Player nextState();
 
-signals:
-
 public slots:
+    void onClickCell(size_t num);
 };
 
 #endif // BOARD_H

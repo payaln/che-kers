@@ -1,15 +1,15 @@
 #ifndef CELL_H
 #define CELL_H
 
-#include <QWidget>
 #include <QLabel>
+#include <QPainter>
 
 enum Type {
     Empty,
     FirstPlayerSimple,
     SecondPlayerSimple,
-    FirstPlayerQween,
-    SecondPlayerQween
+    FirstPlayerQueen,
+    SecondPlayerQueen
 };
 
 class Cell : public QLabel
@@ -34,10 +34,12 @@ private:
     size_t number;
     std::pair<size_t, size_t> way;
 
+    QPalette selected;
+    QPalette highlight;
+    QPalette empty;
+
 signals:
     void highlighted(size_t number);
-
-public slots:
 
 protected:
     void paintEvent(QPaintEvent *event);

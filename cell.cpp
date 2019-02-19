@@ -1,7 +1,4 @@
 #include "cell.h"
-#include <QPainter>
-#include <QPixmap>
-#include <QDebug>
 
 Cell::Cell(size_t number, std::pair<size_t, size_t> way, Type t, QLabel *parent)
     : QLabel(parent)
@@ -9,26 +6,28 @@ Cell::Cell(size_t number, std::pair<size_t, size_t> way, Type t, QLabel *parent)
     , number(number)
     , way(way)
 {
+    selected = QPalette(Qt::cyan);
+    highlight = QPalette(Qt::darkGreen);
+    empty = QPalette(Qt::darkYellow);
+
     setFixedSize(50, 50);
     setAutoFillBackground(true);
-    setPalette(QPalette(Qt::darkYellow));
-    setText(QString("%1").arg(number));
-
+    setPalette(empty);
 }
 
 void Cell::offLighting()
 {
-    setPalette(QPalette(Qt::darkYellow));
+    setPalette(empty);
 }
 
 void Cell::onLighting()
 {
-    setPalette(QPalette(Qt::darkGreen));
+    setPalette(highlight);
 }
 
 void Cell::setSelected()
 {
-    setPalette(QPalette(Qt::cyan));
+    setPalette(selected);
 }
 
 size_t Cell::getNumber() const
@@ -73,14 +72,14 @@ void Cell::paintEvent(QPaintEvent *event)
         p.setBrush(QBrush(Qt::white));
         p.drawEllipse(2, 2, 45, 45);
         break;
-    case FirstPlayerQween:
+    case FirstPlayerQueen:
         p.setPen(QPen(Qt::black));
         p.setBrush(QBrush(Qt::black));
         p.drawEllipse(2, 2, 45, 45);
         p.setPen(QPen(Qt::white, 4));
         p.drawEllipse(10, 10, 30, 30);
         break;
-    case SecondPlayerQween:
+    case SecondPlayerQueen:
         p.setPen(QPen(Qt::white));
         p.setBrush(QBrush(Qt::white));
         p.drawEllipse(2, 2, 45, 45);
